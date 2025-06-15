@@ -5,8 +5,8 @@
 
 typedef enum {
 
-	tk_Start = 0,// Start tokens
-	tk_EOF,		// EOF
+	// tk_Start = 0,// Start tokens
+	tk_EOF = 0,		// EOF
 	tk_Ident,	// <ident>
 	tk_Lit,		// literal
 	tk_Type,	// idk
@@ -40,11 +40,28 @@ typedef struct {
 	str current;
 	str line;
 
-	u64 pos, ln_no, column;
+	usize src_len;
+
+	u64 pos, ln_no, ln_index;
 } Scanner;
 
 struct Token {
 	Tokentyp typ;
+	str line;
+
+	str data;
+	i64 val;
+
+	usize pos, ln_no, ln_index;
 };
+
+typedef struct {
+	struct Token* toks;
+	i32 capacity;
+	i32 length;
+} vectk;
+
+vectk Tokenizer(str source, usize len);
+void printTokens(vectk* vec);
 
 #endif

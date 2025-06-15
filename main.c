@@ -1,16 +1,21 @@
 #include "common.h"
+#include "tok.h"
 
 str readFile(const str filename);
 
 int main(i32 argc, str* argv) {
 	str code = readFile("test.aur");
 
-	for(i32 i = 0; i <= strlen(code); i++) {
-		switch (code[i]) {
-		case '\0':
-			puts("EOF");
-		}
-	}
+	
+
+	// for(i32 i = 0; i <= strlen(code); i++) {
+	// 	switch (code[i]) {
+	// 	case '\0':
+	// 		puts("EOF");
+	// 	}
+	// }
+
+	// Tokenizer(code, strlen(code));
 
 	// printf("%s\n", code);
 	return 0;
@@ -36,11 +41,14 @@ str readFile(const str filename) {
 
 	usize bytesRead = fread(fileContents, 1, fileSize, file);
 	if(bytesRead != fileSize) {
-		fprintf(stderr, "Error Reading file.\nbytesRead : %ld\nfileSize  : %ld\n", bytesRead, fileSize);
+		fprintf(stderr, "Error Reading file.\nbytesRead : %zu\nfileSize  : %zu\n", bytesRead, fileSize);
 		free(fileContents);
 		fclose(file);
 		exit(1);
 	}
+
+	printf("%zu ", bytesRead);
+	printf("%zu ", fileSize);
 
 	fileContents[fileSize] = '\0';
 	fclose(file);
