@@ -15,7 +15,9 @@ int main(i32 argc, str* argv) {
 	// 	}
 	// }
 
-	// Tokenizer(code, strlen(code));
+	Tokenizer(code, strlen(code));
+
+	// printf("%zu\n", strlen(code));
 
 	// printf("%s\n", code);
 	return 0;
@@ -47,8 +49,8 @@ str readFile(const str filename) {
 		exit(1);
 	}
 
-	printf("%zu ", bytesRead);
-	printf("%zu ", fileSize);
+	// printf("%zu ", bytesRead);
+	// printf("%zu ", fileSize);
 
 	fileContents[fileSize] = '\0';
 	fclose(file);

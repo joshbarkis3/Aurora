@@ -91,7 +91,16 @@ void freeVec(vectk* vec) {
 	initVec(vec);
 }
 
+void advance(Scanner* scanner) {
+	scanner->current++;
+	scanner->pos++;
+	scanner->ln_index++;
+}
+
 void printTokens(vectk* vec) {
+	if (vec->length <= 0) {
+		puts("Vector Arr is empty");
+	}
 	for(int i = 0; i < vec->length; i++) {
 		printf("Token {.typ: %s; .dat:\"%s\"; .val:%zu pos:%zu:%zu:%zu}\n", 
 			tkToString[vec->toks[i].typ], vec->toks[i].data, vec->toks[i].val, 
@@ -105,21 +114,42 @@ vectk Tokenizer(str source, usize len) {
 	initScanner(&scanner, source, len);
 	initVec(&tokens);
 
-	apndToken(&tokens, (struct Token){.typ = tk_fn, .line = NULL, .data = tkVal[tk_fn], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
-	apndToken(&tokens, (struct Token){.typ = tk_Ident, .line = NULL, .data = "main", .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
-	apndToken(&tokens, (struct Token){.typ = tk_lparen, .line = NULL, .data = tkVal[tk_lparen], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
-	apndToken(&tokens, (struct Token){.typ = tk_nil, .line = NULL, .data = tkVal[tk_nil], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
-	apndToken(&tokens, (struct Token){.typ = tk_rparen, .line = NULL, .data = tkVal[tk_rparen], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
-	apndToken(&tokens, (struct Token){.typ = tk_arrow, .line = NULL, .data = tkVal[tk_arrow], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
-	apndToken(&tokens, (struct Token){.typ = tk_int32, .line = NULL, .data = tkVal[tk_int32], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
-	apndToken(&tokens, (struct Token){.typ = tk_rbrace, .line = NULL, .data = tkVal[tk_rbrace], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
-	apndToken(&tokens, (struct Token){.typ = tk_ret, .line = NULL, .data = tkVal[tk_ret], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
-	apndToken(&tokens, (struct Token){.typ = tk_Lit, .line = NULL, .data = "", .val = 2, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
-	apndToken(&tokens, (struct Token){.typ = tk_semi, .line = NULL, .data = tkVal[tk_semi], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
-	apndToken(&tokens, (struct Token){.typ = tk_lbrace, .line = NULL, .data = tkVal[tk_lbrace], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_fn, .line = NULL, .data = tkVal[tk_fn], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_Ident, .line = NULL, .data = "main", .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_lparen, .line = NULL, .data = tkVal[tk_lparen], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_nil, .line = NULL, .data = tkVal[tk_nil], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_rparen, .line = NULL, .data = tkVal[tk_rparen], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_arrow, .line = NULL, .data = tkVal[tk_arrow], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_int32, .line = NULL, .data = tkVal[tk_int32], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_rbrace, .line = NULL, .data = tkVal[tk_rbrace], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_ret, .line = NULL, .data = tkVal[tk_ret], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_Lit, .line = NULL, .data = "", .val = 2, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_semi, .line = NULL, .data = tkVal[tk_semi], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+	// apndToken(&tokens, (struct Token){.typ = tk_lbrace, .line = NULL, .data = tkVal[tk_lbrace], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 
 	while(*scanner.current != '\0') {
-
+		switch(*scanner.current) {
+		case ' ':
+		case '\t':
+			break;
+		case '\n':
+			scanner.ln_no++;
+			scanner.ln_index = 0;
+			break;
+		case '(':
+			apndToken(&tokens, (struct Token){.typ = tk_lparen, .line = NULL, .data = tkVal[tk_lparen], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			break;
+		case ')':
+			apndToken(&tokens, (struct Token){.typ = tk_rparen, .line = NULL, .data = tkVal[tk_rparen], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			break;
+		case '{':
+			apndToken(&tokens, (struct Token){.typ = tk_lbrace, .line = NULL, .data = tkVal[tk_lbrace], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			break;
+		case '}':
+			apndToken(&tokens, (struct Token){.typ = tk_rbrace, .line = NULL, .data = tkVal[tk_rbrace], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			break;
+		}
+		advance(&scanner);
 	}
 
 	printTokens(&tokens);
