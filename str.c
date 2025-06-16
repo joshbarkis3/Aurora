@@ -19,6 +19,13 @@ void StrInit(str *s, char *string, usize MaxSize) {
 	}
 }
 
+/* Extends a string */
+void StrExtend(str *s) {
+	i32 oldCapa = s->MaxSz;
+	s->MaxSz = GROW_CAPACITY(oldCapa);
+	s->string = GROW_ARR(char, s->string, oldCapa, s->MaxSz);
+}
+
 /*
 Copies the contents of string src to string dest overriding string src's contents;
 if the dest's MaxSz is less than src's MaxSz; then ret
@@ -29,6 +36,8 @@ void StrCpy(str *dest, str *src) {
 		// ^ i can't figure whether to use both MaxSzs or MaxSz and len
 		// fprintf(stderr, "Destination string cannot hold src string\n");
 		// exit(-2);
+		StrExtend(dest);
+		StrCpy(dest, src);
 		return;
 	}
 	strcpy(dest->string, src->string);
@@ -56,8 +65,11 @@ void StrCat(str *dest, str *src) {
 		strcat(dest->string, src->string);
 	} else {
 		// puts("dest size cannot bear the src size");
-		return;
+		StrExtend(dest);
+		StrCat(dest, src);
 	}
+
+	return;
 
 	/*
 		--- Basic StrCat Fn ---
@@ -81,6 +93,8 @@ void StrChrCat(str *dest, char ch) {
 		dest->string[dest->len] = '\0';
 	} else {
 		// puts("dest size cannot bear the char");
+		StrExtend(dest);
+		StrChrCat(dest, ch);
 		return;
 	}
 }
@@ -88,7 +102,7 @@ void StrChrCat(str *dest, char ch) {
 // i32 main() {
 // 	str s1, s2;
 
-// 	StrInit(&s1, "Hello", 9);
+// 	StrInit(&s1, "He", 3);
 // 	StrInit(&s2, "World", 5);
 
 // 	printf("string 1: %s, %zu, %zu\n", s1.string, s1.MaxSz, s1.len);
@@ -98,9 +112,9 @@ void StrChrCat(str *dest, char ch) {
 // 	// printf("string 1: %s, %zu, %zu\n", s1.string, s1.MaxSz, s1.len);
 // 	// printf("string 2: %s, %zu, %zu\n", s2.string, s2.MaxSz, s2.len);
 
-// 	StrCat(&s1, &s2);
-// 	printf("string 1: %s, %zu, %zu\n", s1.string, s1.MaxSz, s1.len);
-// 	printf("string 2: %s, %zu, %zu\n", s2.string, s2.MaxSz, s2.len);
+// 	// StrCat(&s1, &s2);
+// 	// printf("string 1: %s, %zu, %zu\n", s1.string, s1.MaxSz, s1.len);
+// 	// printf("string 2: %s, %zu, %zu\n", s2.string, s2.MaxSz, s2.len);
 
 // 	// str s3, s4;
 // 	// StrInit(&s3, "What", 5);
@@ -111,10 +125,11 @@ void StrChrCat(str *dest, char ch) {
 // 	// 	puts("False");
 // 	// }
 
-// 	str s5;
-// 	StrInit(&s5, "", 1);
-// 	StrChrCat(&s5, 'a');
-// 	printf("string 5: %s, %zu, %zu\n", s5.string, s5.MaxSz, s5.len);
+// 	// str s5;
+// 	// StrInit(&s5, "", 1);
+// 	// StrChrCat(&s5, 'a');
+// 	// StrChrCat(&s5, 'a');
+// 	// printf("string 5: %s, %zu, %zu\n", s5.string, s5.MaxSz, s5.len);
 
 // 	return 0;
 // }

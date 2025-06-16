@@ -2,6 +2,7 @@
 #define str_h
 
 #include "common.h"
+#include "memory.h"
 #include <string.h>	
 
 /*
@@ -21,5 +22,6 @@ bool StrCmp(str *str1, str *str2);
 bool StrcCmp(str *str1, char* str2);
 void StrCat(str *dest, str *src);
 void StrChrCat(str *dest, char ch);
+void StrExtend(str *s);
 
 #endif

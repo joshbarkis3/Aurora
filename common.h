@@ -1,6 +1,8 @@
 #ifndef common_h
 #define common_h
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -25,6 +27,6 @@ typedef intptr_t iptr;
 
 typedef float f32;
 typedef double f64;
-// typedef long float f128;
+typedef long double f128;
 
 #endif

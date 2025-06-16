@@ -1,14 +1,20 @@
 #include "tok.h"
 #include "memory.h"
 
-#define IndentMaxSize ((usize)255)
-#define NumberMaxSize ((usize)255)
+#define IndentMaxSize ((usize) 255)
+#define NumberMaxSize ((usize) 255)
 
 char* tkVal[TKCOUNT] = {
-	// [tk_Start] = 0,
+	[tk_Error] = 0,
 	[tk_EOF] = 0,
 	[tk_Ident] = 0,
 	[tk_Type] = 0,
+	
+	[tk_Lit] = 0,
+	[tk_intLit] = 0,
+	[tk_fltLit] = 0,
+	[tk_chrLit] = 0,
+	[tk_strLit] = 0,
 
 	[tk_fn] = "fn",
 	[tk_ret] = "return",
@@ -33,11 +39,16 @@ char* tkVal[TKCOUNT] = {
 // cool hack to get around using a ToString fn
 // and a large switch case
 const char* tkToString[TKCOUNT] = {
-	// [tk_Start] = "tk_Start",
+	[tk_Error] = "tk_Error",
 	[tk_EOF] = "tk_EOF",
 	[tk_Ident] = "tk_ident",
-	[tk_Lit] = "tk_Lit",
 	[tk_Type] = "tk_Type",
+	
+	[tk_Lit] = "tk_Lit",
+	[tk_intLit] = "tk_IntLit",
+	[tk_fltLit] = "tk_fltLit",
+	[tk_chrLit] = "tk_chrLit",
+	[tk_strLit] = "tk_StrLit",
 
 	[tk_fn] = "tk_fn",
 	[tk_ret] = "tk_ret",
@@ -69,6 +80,8 @@ static void initScanner(Scanner* scanner, char* source, usize len) {
 	scanner->pos = 0;
 	scanner->ln_no = 1;
 	scanner->ln_index = 1;
+
+	scanner->isErr = false;
 }
 
 static void initVec(vectk* vec) {
@@ -88,10 +101,10 @@ static void apndToken(vectk* vec, struct Token newTok) {
 	vec->length++;
 }
 
-static void freeVec(vectk* vec) {
-	free(vec);
-	initVec(vec);
-}
+// static void freeVec(vectk* vec) {
+// 	free(vec);
+// 	initVec(vec);
+// }
 
 static void advance(Scanner* scanner) {
 	scanner->current++;
@@ -100,11 +113,36 @@ static void advance(Scanner* scanner) {
 }
 
 static bool isalpha(char ch) {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z';
+	return ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z');
 }
 
 static bool isNumb(char ch) {
 	return ('0' <= ch && ch <= '9');
+}
+
+static char* getline(Scanner* scanner) {
+	str line;
+	StrInit(&line, "", 0);
+
+	i32 i = 0;
+	while(*(scanner->line + i) != '\n') {
+		if(*(scanner->line + i) != '\r') {
+			StrChrCat(&line, *(scanner->line + i));
+		}
+		i++;
+	}
+	
+	return line.string;
+}
+
+void handleInvalidIndent(Scanner* scanner, str *s, vectk* vec, u64 pos, u64 ln_no, u64 column) {
+	while(isalpha(*scanner->current) || isNumb(*scanner->current)) {
+		StrChrCat(s, *scanner->current);
+		advance(scanner);
+	}
+	fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Invalid Identifier name: \"%s\"\n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, s->string, ln_no, getline(scanner), ' ', (int)column + 1, '^');
+	apndToken(vec, (struct Token){.typ=tk_Error, .line=NULL, .data = s->string, .pos = pos, .ln_no = ln_no, .ln_index = column});
+	scanner->isErr = true;
 }
 
 static void tokenizeKeywordIndent(Scanner* scanner, vectk* vec) {
@@ -113,7 +151,7 @@ static void tokenizeKeywordIndent(Scanner* scanner, vectk* vec) {
 	StrInit(&s, "", IndentMaxSize);
 	while(isalpha(*scanner->current) || isNumb(*scanner->current) || *scanner->current == '_') {
 		if(s.len == s.MaxSz) {
-			fprintf(stderr, "Indentifier/Keywords have a max size of 127 chars @ %zu:%zu:%zu", pos, ln_no, column);
+			fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Indentifier/Keywords have a max size of 255 chars", pos, ln_no, column);
 			exit(2);
 		}
 
@@ -122,15 +160,15 @@ static void tokenizeKeywordIndent(Scanner* scanner, vectk* vec) {
 	}
 
 	if(StrcCmp(&s, "fn")) {
-		apndToken(vec, (struct Token) {.typ = tk_fn, .line = NULL, .data = tkVal[tk_fn], .val = 0, .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_fn, .line = NULL, .data = tkVal[tk_fn], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "i32") || StrcCmp(&s, "int32") || StrcCmp(&s, "int")) { 
-		apndToken(vec, (struct Token) {.typ = tk_int32, .line = NULL, .data = tkVal[tk_int32], .val = 0, .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_int32, .line = NULL, .data = tkVal[tk_int32], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "return")) {
-		apndToken(vec, (struct Token) {.typ = tk_ret, .line = NULL, .data = tkVal[tk_ret], .val = 0, .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_ret, .line = NULL, .data = tkVal[tk_ret], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "nil")) {
-		apndToken(vec, (struct Token) {.typ = tk_nil, .line = NULL, .data = tkVal[tk_nil], .val = 0, .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_nil, .line = NULL, .data = tkVal[tk_nil], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else {
-		apndToken(vec, (struct Token){.typ=tk_Ident, .line = NULL, .data=s.string, .val = 0, .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token){.typ=tk_Ident, .line = NULL, .data=s.string, .pos = pos, .ln_no = ln_no, .ln_index = column});
 	}
 
 	return;
@@ -138,43 +176,93 @@ static void tokenizeKeywordIndent(Scanner* scanner, vectk* vec) {
 
 static void tokenizeNumbers(Scanner* scanner, vectk* vec) {
 	u64 pos = scanner->pos, ln_no = scanner->ln_no, column = scanner->ln_index;
-	bool hasDot;
-	bool isExp;
+	bool hasDot = false;
+	bool isExp = false;
+	bool isErr = false;
 	str s;
 	StrInit(&s, "", NumberMaxSize);
 	while(isNumb(*scanner->current) || *scanner->current == '.' || *scanner->current == 'e' || *scanner->current == 'E') {
 		if(s.len == s.MaxSz) {
-			fprintf(stderr, "Numbers have a max size of 127 chars @ %zu:%zu:%zu", pos, ln_no, column);
+			fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Numbers have a max size of 255 chars\n", pos, ln_no, column);
 			exit(2);
 		}
 
 		if(*scanner->current == '.') {
-			hasDot = true;
-		} else if (*scanner->current == 'e' || *scanner->current == 'E') {
-			isExp = true;
+			if(hasDot) {
+				if(!isErr && hasDot)
+					fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Invalid Suffix for float \n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, ln_no, getline(scanner), ' ', (int)scanner->ln_index + 1, '^');
+				scanner->isErr = true;
+				isErr = true;
+			} else {
+				hasDot = true;	
+			}
+		} 
+		if ((*scanner->current == 'e' || *scanner->current == 'E')) {
+			if(isExp) {
+				if(!isErr && isExp)
+					fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Floats cannot have more than one exp\n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, ln_no, getline(scanner), ' ', (int)scanner->ln_index + 1, '^');
+				scanner->isErr = true;
+				isErr = true;
+			} else {
+				isExp = true;	
+			}
 		}
 
 		StrChrCat(&s, *scanner->current);
 		advance(scanner);
+
+		if (isalpha(*scanner->current) && !(*scanner->current == 'e' || *scanner->current == 'E')) {
+			handleInvalidIndent(scanner, &s, vec, pos, ln_no, column);
+			return;
+		}
 	}
 
-	if (hasDot || isExp) {
-		apndToken(vec, (struct Token){.typ=tk_Lit, .line = NULL, .data=s.string, .val = atof(s.string), .pos = pos, .ln_no = ln_no, .ln_index = column});	
+	if ((hasDot || isExp) && !isErr) {
+		apndToken(vec, (struct Token){.typ=tk_fltLit, .line = NULL, .data=s.string, .Fval = atof(s.string), .pos = pos, .ln_no = ln_no, .ln_index = column});
+	} else if (!hasDot && !isExp && !isErr) {
+		apndToken(vec, (struct Token){.typ=tk_intLit, .line = NULL, .data=s.string, .Ival = atoll(s.string), .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else {
-		apndToken(vec, (struct Token){.typ=tk_Lit, .line = NULL, .data=s.string, .val = atoi(s.string), .pos = pos, .ln_no = ln_no, .ln_index = column});	
+		apndToken(vec, (struct Token){.typ=tk_Error, .line = NULL, .data=s.string, .pos = pos, .ln_no = ln_no, .ln_index = column});
 	}
 
 	return;
 }
+
+// static void AnalyzeStr(Scanner* scanner, vectk* vec) {
+// 	u64 pos = scanner->pos, ln_no = scanner->ln_no, column = scanner->ln_index;
+// 	str strLit;
+// 	StrInit(&strLit, "", 8);
+// 	// todo
+
+// 	apndToken(vec, (struct Token){.typ = tk_chrLit, .line = NULL, .data = strLit.string, pos, ln_no, column});
+// }
+
+// static void AnalyzeChr(Scanner* scanner, vectk* vec) {
+// 	u64 pos = scanner->pos, ln_no = scanner->ln_no, column = scanner->ln_index;
+// 	char chrLit[2] = "\0";
+// 	// todo
+
+// 	apndToken(vec, (struct Token){.typ = tk_chrLit, .line = NULL, .data = chrLit, .Ival = atoi(chrLit), pos, ln_no, column});
+// 	return;
+// }
+
+// static void ignoreComment(Scanner* scanner) {
+// 	// todo
+// }
 
 void printTokens(vectk* vec) {
 	if (vec->length <= 0) {
 		puts("Vector Arr is empty");
 	}
 	for(i32 i = 0; i < vec->length; i++) {
-		printf("Token {.typ: %s; .dat:\"%s\"; .val:%zu pos:%zu:%zu:%zu}\n", 
-			tkToString[vec->toks[i].typ], vec->toks[i].data, vec->toks[i].val, 
-					vec->toks[i].pos, vec->toks[i].ln_no, vec->toks[i].ln_index);
+		printf("Token {.typ: %s; .dat:\"%s\"; ", tkToString[vec->toks[i].typ], vec->toks[i].data);
+		if(vec->toks[i].typ == tk_fltLit) {
+			printf(".val:%Lg ", vec->toks[i].Fval);
+		} else if (vec->toks[i].typ == tk_intLit || vec->toks[i].typ == tk_chrLit) {
+			printf(".val:%zu ", vec->toks[i].Ival);
+		}
+		
+		printf("pos:%zu:%zu:%zu}\n", vec->toks[i].pos, vec->toks[i].ln_no, vec->toks[i].ln_index); 
 	}
 }
 
@@ -192,26 +280,26 @@ vectk Tokenizer(char* source, usize len) {
 		case '\n':
 			scanner.ln_no++;
 			scanner.ln_index = 0;
+			scanner.line = scanner.current + 1;
 			break;
 		case '(':
-			apndToken(&tokens, (struct Token){.typ = tk_lparen, .line = NULL, .data = tkVal[tk_lparen], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_lparen, .line = NULL, .data = tkVal[tk_lparen], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case ')':
-			apndToken(&tokens, (struct Token){.typ = tk_rparen, .line = NULL, .data = tkVal[tk_rparen], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_rparen, .line = NULL, .data = tkVal[tk_rparen], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case '{':
-			apndToken(&tokens, (struct Token){.typ = tk_lbrace, .line = NULL, .data = tkVal[tk_lbrace], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_lbrace, .line = NULL, .data = tkVal[tk_lbrace], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case '}':
-			apndToken(&tokens, (struct Token){.typ = tk_rbrace, .line = NULL, .data = tkVal[tk_rbrace], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_rbrace, .line = NULL, .data = tkVal[tk_rbrace], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case '[':
-			apndToken(&tokens, (struct Token){.typ = tk_lbracket, .line = NULL, .data = tkVal[tk_lbracket], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_lbracket, .line = NULL, .data = tkVal[tk_lbracket], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case ']':
-			apndToken(&tokens, (struct Token){.typ = tk_rbracket, .line = NULL, .data = tkVal[tk_rbracket], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_rbracket, .line = NULL, .data = tkVal[tk_rbracket], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
-		// + - * / % " ' & | ^ ! = \ < >
 		case '@':
 			puts("Error: '@' not implemented");
 			break;
@@ -227,7 +315,7 @@ vectk Tokenizer(char* source, usize len) {
 			}
 			break;
 		case ';':
-			apndToken(&tokens, (struct Token){.typ = tk_semi, .line = NULL, .data = tkVal[tk_semi], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_semi, .line = NULL, .data = tkVal[tk_semi], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case '#':
 			puts("Error: '#' not implemented");
@@ -238,20 +326,18 @@ vectk Tokenizer(char* source, usize len) {
 		case '\\':
 			puts("Error: '\\' not implemented");
 			break;
-		case '$':
-			puts("Error: '$' not implemented / used");
-			break;
-		case '?':
-			puts("Error: '?' not implemented / used");
-			break;
-		case '~':
-			puts("Error: '~' not implemented / used");
-			break;
-		case '`':
-			puts("Error: '`' not implemented / used");
-			break;
-		// -> ++ -- // /* */ += -= /= *= %= == != <= >= || && ^^ !!<< >>
-		// maybe: $ ? ~ `
+		// case '$':
+		// 	puts("Error: '$' not implemented / used");
+		// 	break;
+		// case '?':
+		// 	puts("Error: '?' not implemented / used");
+		// 	break;
+		// case '~':
+		// 	puts("Error: '~' not implemented / used");
+		// 	break;
+		// case '`':
+		// 	puts("Error: '`' not implemented / used");
+		// 	break;
 		case '+': // ++ += +
 			if(*(scanner.current + 1) == '+') {
 				// tok ++
@@ -277,7 +363,7 @@ vectk Tokenizer(char* source, usize len) {
 				advance(&scanner);
 			} else if(*(scanner.current + 1) == '>') {
 				// tok ->
-				apndToken(&tokens, (struct Token){.typ = tk_arrow, .line = NULL, .data = tkVal[tk_arrow], .val = 0, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_arrow, .line = NULL, .data = tkVal[tk_arrow], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else {
 				// tok -
@@ -387,9 +473,11 @@ vectk Tokenizer(char* source, usize len) {
 			break;
 		case '\"':
 			puts("Error: '\"' not implemented");
+			// AnalyzeStr(&scanner, &tokens);
 			break;
 		case '\'':
 			puts("Error: '\'' not implemented");
+			// AnalyzeChr(&scanner, &tokens);
 			break;
 		case 'a'...'z':
 		case 'A'...'Z':
@@ -400,12 +488,15 @@ vectk Tokenizer(char* source, usize len) {
 			tokenizeNumbers(&scanner, &tokens);
 			continue;
 		default:
-			fprintf(stderr, "Error Unknown Character identified: '%c' @ %zu:%zu:%zu\n", *scanner.current, scanner.pos, scanner.ln_no, scanner.ln_index);
-			// exit(2);
+			fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Unknown Character identified: '%c' \n%8zu | %s\n%8c |%*c\n", scanner.pos, scanner.ln_no, scanner.ln_index, *scanner.current, scanner.ln_no, getline(&scanner), ' ', (int)scanner.ln_index + 1, '^');
+			char ErrTok[2] = {*scanner.current, '\0'};
+			apndToken(&tokens, (struct Token){.typ=tk_Error, .line=NULL, .data = ErrTok, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			scanner.isErr = true;
 		}
 		advance(&scanner);
 	}
 
+	if(scanner.isErr) { exit(2); }
 	printTokens(&tokens);
 
 	return tokens;
