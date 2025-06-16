@@ -1,10 +1,10 @@
 #include "common.h"
 #include "tok.h"
 
-str readFile(const str filename);
+char* readFile(const char* filename);
 
-int main(i32 argc, str* argv) {
-	str code = readFile("test.aur");
+int main(i32 argc, char** argv) {
+	char* code = readFile("./tests/test.aur");
 
 	
 
@@ -23,7 +23,7 @@ int main(i32 argc, str* argv) {
 	return 0;
 }
 
-str readFile(const str filename) {
+char* readFile(const char* filename) {
 	FILE *file = fopen(filename, "r");
 	if(file == NULL) {
 		fprintf(stderr, "Error Reading File. %s\n", filename);
@@ -34,7 +34,7 @@ str readFile(const str filename) {
 	usize fileSize = ftell(file);
 	rewind(file);
 	
-	str fileContents = (str)malloc(fileSize + 1);
+	char* fileContents = (char*)malloc(fileSize + 1);
 	if (fileContents == NULL) {
 		fprintf(stderr, "File memory allocation failed.\n");
 		fclose(file);

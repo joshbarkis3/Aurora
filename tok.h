@@ -2,6 +2,7 @@
 #define tok_h
 
 #include "common.h"
+#include "str.h"
 
 typedef enum {
 
@@ -36,9 +37,9 @@ typedef enum {
 #define TKCOUNT (tk_End)
 
 typedef struct {
-	str source;
-	str current;
-	str line;
+	char* source;
+	char* current;
+	char* line;
 
 	usize src_len;
 
@@ -47,9 +48,9 @@ typedef struct {
 
 struct Token {
 	Tokentyp typ;
-	str line;
+	char* line;
 
-	str data;
+	char* data;
 	i64 val;
 
 	usize pos, ln_no, ln_index;
@@ -61,7 +62,7 @@ typedef struct {
 	i32 length;
 } vectk;
 
-vectk Tokenizer(str source, usize len);
+vectk Tokenizer(char* source, usize len);
 void printTokens(vectk* vec);
 
 #endif

@@ -27,6 +27,4 @@ typedef float f32;
 typedef double f64;
 // typedef long float f128;
 
-typedef char* str;
-
 #endif
