@@ -71,5 +71,6 @@ typedef struct {
 
 vectk Tokenizer(char* source, usize len);
 void printTokens(vectk* vec);
+void freeVec(vectk* vec);
 
 #endif

@@ -101,10 +101,16 @@ static void apndToken(vectk* vec, struct Token newTok) {
 	vec->length++;
 }
 
-// static void freeVec(vectk* vec) {
-// 	free(vec);
-// 	initVec(vec);
-// }
+void freeVec(vectk* vec) {
+	for(i32 i = 0; i < vec->length; i++) {
+		if(vec->toks[i].typ == tk_Ident || vec->toks[i].typ == tk_fltLit || vec->toks[i].typ == tk_intLit || vec->toks[i].typ == tk_strLit) {
+			puts(vec->toks[i].data);
+			free(vec->toks[i].data);
+		}
+	}
+	free(vec->toks);
+	initVec(vec);
+}
 
 static void advance(Scanner* scanner) {
 	scanner->current++;
@@ -136,7 +142,7 @@ static char* getstrLine(Scanner* scanner) {
 }
 
 void handleInvalidIndent(Scanner* scanner, str *s, vectk* vec, u64 pos, u64 ln_no, u64 column) {
-	while(isalpha(*scanner->current) || isNumb(*scanner->current)) {
+	while(isalph(*scanner->current) || isNumb(*scanner->current)) {
 		StrChrCat(s, *scanner->current);
 		advance(scanner);
 	}
@@ -149,7 +155,7 @@ static void tokenizeKeywordIndent(Scanner* scanner, vectk* vec) {
 	u64 pos = scanner->pos, ln_no = scanner->ln_no, column = scanner->ln_index;
 	str s;
 	StrInit(&s, "", IndentMaxSize);
-	while(isalpha(*scanner->current) || isNumb(*scanner->current) || *scanner->current == '_') {
+	while(isalph(*scanner->current) || isNumb(*scanner->current) || *scanner->current == '_') {
 		if(s.len == s.MaxSz) {
 			fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Indentifier/Keywords have a max size of 255 chars", pos, ln_no, column);
 			exit(2);
@@ -160,16 +166,22 @@ static void tokenizeKeywordIndent(Scanner* scanner, vectk* vec) {
 	}
 
 	if(StrcCmp(&s, "fn")) {
+		free(s.string);
 		apndToken(vec, (struct Token) {.typ = tk_fn, .line = NULL, .data = tkVal[tk_fn], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "i32") || StrcCmp(&s, "int32") || StrcCmp(&s, "int")) { 
+		free(s.string);
 		apndToken(vec, (struct Token) {.typ = tk_int32, .line = NULL, .data = tkVal[tk_int32], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "return")) {
+		free(s.string);
 		apndToken(vec, (struct Token) {.typ = tk_ret, .line = NULL, .data = tkVal[tk_ret], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "nil")) {
+		free(s.string);
 		apndToken(vec, (struct Token) {.typ = tk_nil, .line = NULL, .data = tkVal[tk_nil], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else {
-		apndToken(vec, (struct Token){.typ=tk_Ident, .line = NULL, .data=s.string, .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token){.typ=tk_Ident, .line = NULL, .data = s.string, .pos = pos, .ln_no = ln_no, .ln_index = column});
 	}
+
+	// free(s.string); // memory leakers
 
 	return;
 }
@@ -211,7 +223,7 @@ static void tokenizeNumbers(Scanner* scanner, vectk* vec) {
 		StrChrCat(&s, *scanner->current);
 		advance(scanner);
 
-		if (isalpha(*scanner->current) && !(*scanner->current == 'e' || *scanner->current == 'E')) {
+		if (isalph(*scanner->current) && !(*scanner->current == 'e' || *scanner->current == 'E')) {
 			handleInvalidIndent(scanner, &s, vec, pos, ln_no, column);
 			return;
 		}
@@ -224,6 +236,8 @@ static void tokenizeNumbers(Scanner* scanner, vectk* vec) {
 	} else {
 		apndToken(vec, (struct Token){.typ=tk_Error, .line = NULL, .data=s.string, .pos = pos, .ln_no = ln_no, .ln_index = column});
 	}
+
+	// free(s.string); memory leaker
 
 	return;
 }
@@ -497,7 +511,7 @@ vectk Tokenizer(char* source, usize len) {
 	}
 
 	if(scanner.isErr) { exit(2); }
-	printTokens(&tokens);
+	// printTokens(&tokens);
 
 	return tokens;
 }

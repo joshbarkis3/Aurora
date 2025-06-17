@@ -13,8 +13,11 @@ int main(i32 argc, char** argv) {
 	// 	}
 	// }
 
-	Tokenizer(code, strlen(code));
+	vectk tokens = Tokenizer(code, strlen(code));
+	printTokens(&tokens);
 
+	free(code);
+	freeVec(&tokens);
 	// printf("%zu\n", strlen(code));
 
 	// printf("%s\n", code);
