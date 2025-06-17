@@ -66,6 +66,7 @@ LANGUAGE FEATURES (not in a particular order)
 | ❌      | Data Structures |
 | ❌      | Standard Library |
 | ❌      | Memory Safety Nets |
+| ❌      | Scope |
 
 ### Code Documentation
 bruz i havent finished the Tokenizer yet
