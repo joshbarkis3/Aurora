@@ -367,48 +367,38 @@ vectk Tokenizer(char* source, usize len) {
 			}
 			break;
 		case '-': // -- -= -> -
-			if(*(scanner.current + 1) == '-') {
-				// tok --
+			if(*(scanner.current + 1) == '-') { // tok --
 				puts("Error: '--' not implemented");
 				advance(&scanner);
-			} else if (*(scanner.current + 1) == '=') {
-				// tok -=
+			} else if (*(scanner.current + 1) == '=') { // tok -=
 				puts("Error: '-=' not implemented");
 				advance(&scanner);
-			} else if(*(scanner.current + 1) == '>') {
-				// tok ->
+			} else if(*(scanner.current + 1) == '>') { // tok ->
 				apndToken(&tokens, (struct Token){.typ = tk_arrow, .line = NULL, .data = tkVal[tk_arrow], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
-			} else {
-				// tok -
+			} else { // tok -
 				puts("Error: '-' not implemented");
 			}
 			break;
 		case '*': // *= *
-			if(*(scanner.current + 1) == '=') {
-				// tok *=
+			if(*(scanner.current + 1) == '=') { // tok *=
 				puts("Error: '*=' not implemented");
 				advance(&scanner);
-			} else {
-				// tok *
+			} else { // tok *
 				puts("Error: '*' not implemented");
 			}
 			break;
 		case '/': // // /* */ /= / 
-			if(*(scanner.current + 1) == '/') {
-				// comment
+			if(*(scanner.current + 1) == '/') { // comment
 				puts("Error: '//' not implemented");
 				advance(&scanner);
-			} else if(*(scanner.current + 1) == '*') {
-				// block comment
+			} else if(*(scanner.current + 1) == '*') { /* block comment */
 				puts("Error: '/**/' not implemented");
 				advance(&scanner);
-			} else if(*(scanner.current + 1) == '=') {
-				// tok /=
+			} else if(*(scanner.current + 1) == '=') { // tok /=
 				puts("Error: '/=' not implemented");
 				advance(&scanner);
-			} else {
-				// tok /
+			} else { // tok /
 				puts("Error: '/' not implemented");
 			}
 			break;

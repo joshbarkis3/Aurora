@@ -1,24 +1,25 @@
-cc=clang
+CC = cc
 CFLAGS = -Wall
 LDFLAGS =
 
-SRC = $(wildcard src/*.c)
-INC = $(wildcard src/*.h)
-
-OBJ = $(SRC:.c=.o)
-
+SRCDIR = ./src
 BUILDDIR = ./build
 
-all: aurora clean
+SRC = $(wildcard $(SRCDIR)/*.c)
+INC = $(wildcard $(SRCDIR)/*.h)
 
-%.o: %.c %.h
-	$(CC) -o $@ -c $< $(CFLAGS)
+OBJ := $(SRC:$(SRCDIR)/%.c=$(BUILDDIR)/%.o)
 
-build:
-	mkdir -p $(BUILDDIR)
+all: aurora
+
+$(BUILDDIR)/%.o: $(SRCDIR)/%.c
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 aurora: $(OBJ)
 	$(CC) $^ -o $@ $(LDFLAGS)
 
+.PHONY: clean
+
 clean:
-	rm -rf $(wildcard src/*.o)
+	rm -rf $(wildcard $(BUILDDIR)/*.o)
