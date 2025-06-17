@@ -22,4 +22,4 @@ aurora: $(OBJ)
 .PHONY: clean
 
 clean:
-	rm -rf $(wildcard $(BUILDDIR)/*.o)
+	rm -rf $(BUILDDIR)
