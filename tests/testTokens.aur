@@ -1,9 +1,52 @@
 + - * / % " ' & | ^ ! = \ < > : ; , . @ # 
-// -> ++ -- // /* */ += -= /= *= %= == != <= >= || && ^^ !!<< >>
+-> ++ -- /* */ += -= /= *= %= == != <= >= || && ^^ !!<< >>
 $ ~ ` ? 
+
+// helo i am cool please eat chiken nugs ~ ! @ # $ ^ { }
+
+8 2 23 3233
+
+! @ # 4 5 % ^ /*
+im am cheese
+*/ woooooooooooooooooo;
+
+
+int x = /* i am cool */ 2;
+
 fn 
 return
+break
+continue
+do
+while
+for
+if
+else
+goto
+switch
+case
+default
+auto
+import
+use
+typedef
+
+i8 int8 sbyte
+i16 int16 short
 i32 int32 int
+i64 int64 long isize
+u1 uint1 bool
+u8 uint8 char byte
+u16 uint16 ushort
+u32 uint32 uint
+u64 uint64 ulong usize
+f32 float32 float
+f64 float64 double
+f128 float128 ldouble
+nil u0
+str
+ptr
+
 ( )
 { }
 [ ]
