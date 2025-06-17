@@ -112,7 +112,7 @@ static void advance(Scanner* scanner) {
 	scanner->ln_index++;
 }
 
-static bool isalpha(char ch) {
+static bool isalph(char ch) {
 	return ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z');
 }
 
@@ -120,7 +120,7 @@ static bool isNumb(char ch) {
 	return ('0' <= ch && ch <= '9');
 }
 
-static char* getline(Scanner* scanner) {
+static char* getstrLine(Scanner* scanner) {
 	str line;
 	StrInit(&line, "", 0);
 
@@ -140,7 +140,7 @@ void handleInvalidIndent(Scanner* scanner, str *s, vectk* vec, u64 pos, u64 ln_n
 		StrChrCat(s, *scanner->current);
 		advance(scanner);
 	}
-	fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Invalid Identifier name: \"%s\"\n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, s->string, ln_no, getline(scanner), ' ', (int)column + 1, '^');
+	fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Invalid Identifier name: \"%s\"\n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, s->string, ln_no, getstrLine(scanner), ' ', (int)column + 1, '^');
 	apndToken(vec, (struct Token){.typ=tk_Error, .line=NULL, .data = s->string, .pos = pos, .ln_no = ln_no, .ln_index = column});
 	scanner->isErr = true;
 }
@@ -190,7 +190,7 @@ static void tokenizeNumbers(Scanner* scanner, vectk* vec) {
 		if(*scanner->current == '.') {
 			if(hasDot) {
 				if(!isErr && hasDot)
-					fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Invalid Suffix for float \n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, ln_no, getline(scanner), ' ', (int)scanner->ln_index + 1, '^');
+					fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Invalid Suffix for float \n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, ln_no, getstrLine(scanner), ' ', (int)scanner->ln_index + 1, '^');
 				scanner->isErr = true;
 				isErr = true;
 			} else {
@@ -200,7 +200,7 @@ static void tokenizeNumbers(Scanner* scanner, vectk* vec) {
 		if ((*scanner->current == 'e' || *scanner->current == 'E')) {
 			if(isExp) {
 				if(!isErr && isExp)
-					fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Floats cannot have more than one exp\n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, ln_no, getline(scanner), ' ', (int)scanner->ln_index + 1, '^');
+					fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Floats cannot have more than one exp\n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, ln_no, getstrLine(scanner), ' ', (int)scanner->ln_index + 1, '^');
 				scanner->isErr = true;
 				isErr = true;
 			} else {
@@ -488,7 +488,7 @@ vectk Tokenizer(char* source, usize len) {
 			tokenizeNumbers(&scanner, &tokens);
 			continue;
 		default:
-			fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Unknown Character identified: '%c' \n%8zu | %s\n%8c |%*c\n", scanner.pos, scanner.ln_no, scanner.ln_index, *scanner.current, scanner.ln_no, getline(&scanner), ' ', (int)scanner.ln_index + 1, '^');
+			fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Unknown Character identified: '%c' \n%8zu | %s\n%8c |%*c\n", scanner.pos, scanner.ln_no, scanner.ln_index, *scanner.current, scanner.ln_no, getstrLine(&scanner), ' ', (int)scanner.ln_index + 1, '^');
 			char ErrTok[2] = {*scanner.current, '\0'};
 			apndToken(&tokens, (struct Token){.typ=tk_Error, .line=NULL, .data = ErrTok, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			scanner.isErr = true;
