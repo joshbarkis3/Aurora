@@ -1,5 +1,8 @@
 #include "tok.h"
+#include "common.h"
 #include "memory.h"
+#include <stdlib.h>
+#include <string.h>
 
 #define IndentMaxSize ((usize) 255)
 #define NumberMaxSize ((usize) 255)
@@ -236,9 +239,9 @@ void freeVec(vectk* vec) {
 		if(vec->toks[i].typ == tk_Ident || vec->toks[i].typ == tk_fltLit || vec->toks[i].typ == tk_intLit || vec->toks[i].typ == tk_strLit || vec->toks[i].typ == tk_Error) {
 			free(vec->toks[i].data);
 		}
+		free(vec->toks[i].line);
 	}
 	free(vec->toks);
-	initVec(vec);
 }
 
 static void advance(Scanner* scanner) {
@@ -255,19 +258,18 @@ static bool isNumb(char ch) {
 	return ('0' <= ch && ch <= '9');
 }
 
-static char* getstrLine(Scanner* scanner) {
-	str line;
-	StrInit(&line, "", 0);
+static char* getstrLine(Scanner* scanner, char* buf) {
+	const char* end = strchr(scanner->line, '\n');
+	const usize llen = end == NULL ? strlen(scanner->line) : ((usize) (end - scanner->line));
 
-	i32 i = 0;
-	while(*(scanner->line + i) != '\n') {
-		if(*(scanner->line + i) != '\r') {
-			StrChrCat(&line, *(scanner->line + i));
-		}
-		i++;
+	if(buf == NULL) {
+		buf = malloc(llen + 1);
 	}
-	
-	return line.string;
+
+	memcpy(buf, scanner->line, llen);
+	buf[llen] = '\0';
+
+	return buf;
 }
 
 void handleInvalidIndent(Scanner* scanner, str *s, vectk* vec, u64 pos, u64 ln_no, u64 column) {
@@ -275,8 +277,10 @@ void handleInvalidIndent(Scanner* scanner, str *s, vectk* vec, u64 pos, u64 ln_n
 		StrChrCat(s, *scanner->current);
 		advance(scanner);
 	}
-	fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Invalid Identifier name: \"%s\"\n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, s->string, ln_no, getstrLine(scanner), ' ', (int)column + 1, '^');
-	apndToken(vec, (struct Token){.typ=tk_Error, .line=NULL, .data = s->string, .pos = pos, .ln_no = ln_no, .ln_index = column});
+	char* errline = NULL;
+	errline = getstrLine(scanner, errline);
+	fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Invalid Identifier name: \"%s\"\n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, s->string, ln_no, errline, ' ', (int)column + 1, '^');
+	apndToken(vec, (struct Token){.typ=tk_Error, .line=errline, .data = s->string, .pos = pos, .ln_no = ln_no, .ln_index = column});
 	scanner->isErr = true;
 }
 
@@ -287,10 +291,13 @@ Memory Leaks may be found here -- I did try to clean them up
 static void tokenizeKeywordIndent(Scanner* scanner, vectk* vec) {
 	u64 pos = scanner->pos, ln_no = scanner->ln_no, column = scanner->ln_index;
 	str s;
+	char* errline = NULL;
 	StrInit(&s, "", IndentMaxSize);
 	while(isalph(*scanner->current) || isNumb(*scanner->current) || *scanner->current == '_') {
 		if(s.len == s.MaxSz) {
 			fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Indentifier/Keywords have a max size of 255 chars", pos, ln_no, column);
+			freeVec(vec);
+			free(scanner->source);
 			exit(2);
 		}
 
@@ -300,102 +307,102 @@ static void tokenizeKeywordIndent(Scanner* scanner, vectk* vec) {
 
 	if(StrcCmp(&s, "fn")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_fn, .line = NULL, .data = tkVal[tk_fn], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_fn, .line = getstrLine(scanner, errline), .data = tkVal[tk_fn], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "return")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_ret, .line = NULL, .data = tkVal[tk_ret], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_ret, .line = getstrLine(scanner, errline), .data = tkVal[tk_ret], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "break")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_break, .line = NULL, .data = tkVal[tk_break], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_break, .line = getstrLine(scanner, errline), .data = tkVal[tk_break], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "continue")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_cont, .line = NULL, .data = tkVal[tk_cont], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_cont, .line = getstrLine(scanner, errline), .data = tkVal[tk_cont], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "do")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_do, .line = NULL, .data = tkVal[tk_do], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_do, .line = getstrLine(scanner, errline), .data = tkVal[tk_do], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "while")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_while, .line = NULL, .data = tkVal[tk_while], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_while, .line = getstrLine(scanner, errline), .data = tkVal[tk_while], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "for")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_for, .line = NULL, .data = tkVal[tk_for], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_for, .line = getstrLine(scanner, errline), .data = tkVal[tk_for], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "if")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_if, .line = NULL, .data = tkVal[tk_if], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_if, .line = getstrLine(scanner, errline), .data = tkVal[tk_if], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "else")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_else, .line = NULL, .data = tkVal[tk_else], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_else, .line = getstrLine(scanner, errline), .data = tkVal[tk_else], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "goto")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_goto, .line = NULL, .data = tkVal[tk_goto], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_goto, .line = getstrLine(scanner, errline), .data = tkVal[tk_goto], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "switch")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_switch, .line = NULL, .data = tkVal[tk_switch], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_switch, .line = getstrLine(scanner, errline), .data = tkVal[tk_switch], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "case")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_case, .line = NULL, .data = tkVal[tk_case], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_case, .line = getstrLine(scanner, errline), .data = tkVal[tk_case], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "default")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_default, .line = NULL, .data = tkVal[tk_default], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_default, .line = getstrLine(scanner, errline), .data = tkVal[tk_default], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "auto")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_auto, .line = NULL, .data = tkVal[tk_auto], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_auto, .line = getstrLine(scanner, errline), .data = tkVal[tk_auto], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "import")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_import, .line = NULL, .data = tkVal[tk_import], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_import, .line = getstrLine(scanner, errline), .data = tkVal[tk_import], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "use")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_use, .line = NULL, .data = tkVal[tk_use], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_use, .line = getstrLine(scanner, errline), .data = tkVal[tk_use], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "typedef")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_typedef, .line = NULL, .data = tkVal[tk_typedef], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_typedef, .line = getstrLine(scanner, errline), .data = tkVal[tk_typedef], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "i8") || StrcCmp(&s, "int8") || StrcCmp(&s, "sbyte")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_int8, .line = NULL, .data = tkVal[tk_int8], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_int8, .line = getstrLine(scanner, errline), .data = tkVal[tk_int8], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "i16") || StrcCmp(&s, "int16") || StrcCmp(&s, "short")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_int16, .line = NULL, .data = tkVal[tk_int16], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_int16, .line = getstrLine(scanner, errline), .data = tkVal[tk_int16], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "i32") || StrcCmp(&s, "int32") || StrcCmp(&s, "int")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_int32, .line = NULL, .data = tkVal[tk_int32], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_int32, .line = getstrLine(scanner, errline), .data = tkVal[tk_int32], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "i64") || StrcCmp(&s, "int64") || StrcCmp(&s, "long") || StrcCmp(&s, "isize")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_int64, .line = NULL, .data = tkVal[tk_int64], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_int64, .line = getstrLine(scanner, errline), .data = tkVal[tk_int64], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "u1") || StrcCmp(&s, "uint1") || StrcCmp(&s, "bool")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_uint1, .line = NULL, .data = tkVal[tk_uint1], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_uint1, .line = getstrLine(scanner, errline), .data = tkVal[tk_uint1], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "u8") || StrcCmp(&s, "uint8") || StrcCmp(&s, "byte") || StrcCmp(&s, "char")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_uint8, .line = NULL, .data = tkVal[tk_uint8], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_uint8, .line = getstrLine(scanner, errline), .data = tkVal[tk_uint8], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "u16") || StrcCmp(&s, "uint16") || StrcCmp(&s, "ushort")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_uint16, .line = NULL, .data = tkVal[tk_uint16], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_uint16, .line = getstrLine(scanner, errline), .data = tkVal[tk_uint16], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "u32") || StrcCmp(&s, "uint32") || StrcCmp(&s, "uint")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_uint32, .line = NULL, .data = tkVal[tk_uint32], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_uint32, .line = getstrLine(scanner, errline), .data = tkVal[tk_uint32], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "u64") || StrcCmp(&s, "uint64") || StrcCmp(&s, "ulong") || StrcCmp(&s, "usize")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_uint64, .line = NULL, .data = tkVal[tk_uint64], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_uint64, .line = getstrLine(scanner, errline), .data = tkVal[tk_uint64], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "f32") || StrcCmp(&s, "float32") || StrcCmp(&s, "float")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_float32, .line = NULL, .data = tkVal[tk_float32], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_float32, .line = getstrLine(scanner, errline), .data = tkVal[tk_float32], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "f64") || StrcCmp(&s, "float64") || StrcCmp(&s, "double")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_float64, .line = NULL, .data = tkVal[tk_float64], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_float64, .line = getstrLine(scanner, errline), .data = tkVal[tk_float64], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "f128") || StrcCmp(&s, "float128") || StrcCmp(&s, "ldouble")) { 
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_float128, .line = NULL, .data = tkVal[tk_float128], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_float128, .line = getstrLine(scanner, errline), .data = tkVal[tk_float128], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "nil") || StrcCmp(&s, "u0")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_nil, .line = NULL, .data = tkVal[tk_nil], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_nil, .line = getstrLine(scanner, errline), .data = tkVal[tk_nil], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "str")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_str, .line = NULL, .data = tkVal[tk_str], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_str, .line = getstrLine(scanner, errline), .data = tkVal[tk_str], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "ptr")) {
 		free(s.string);
-		apndToken(vec, (struct Token) {.typ = tk_ptr, .line = NULL, .data = tkVal[tk_ptr], .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token) {.typ = tk_ptr, .line = getstrLine(scanner, errline), .data = tkVal[tk_ptr], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else {
-		apndToken(vec, (struct Token){.typ=tk_Ident, .line = NULL, .data = s.string, .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token){.typ=tk_Ident, .line = getstrLine(scanner, errline), .data = s.string, .pos = pos, .ln_no = ln_no, .ln_index = column});
 	}
 
 	// free(s.string); // memory leakers
@@ -408,6 +415,7 @@ static void tokenizeNumbers(Scanner* scanner, vectk* vec) {
 	bool hasDot = false;
 	bool isExp = false;
 	bool isErr = false;
+	char* errline = NULL;
 	str s;
 	StrInit(&s, "", NumberMaxSize);
 	while(isNumb(*scanner->current) || *scanner->current == '.' || *scanner->current == 'e' || *scanner->current == 'E') {
@@ -418,8 +426,10 @@ static void tokenizeNumbers(Scanner* scanner, vectk* vec) {
 
 		if(*scanner->current == '.') {
 			if(hasDot) {
-				if(!isErr && hasDot)
-					fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Invalid Suffix for float \n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, ln_no, getstrLine(scanner), ' ', (int)scanner->ln_index + 1, '^');
+				if(!isErr && hasDot) {
+					errline = getstrLine(scanner, errline);
+					fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Invalid Suffix for float \n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, ln_no, errline, ' ', (int)scanner->ln_index + 1, '^');
+				}
 				scanner->isErr = true;
 				isErr = true;
 			} else {
@@ -428,8 +438,10 @@ static void tokenizeNumbers(Scanner* scanner, vectk* vec) {
 		} 
 		if ((*scanner->current == 'e' || *scanner->current == 'E')) {
 			if(isExp) {
-				if(!isErr && isExp)
-					fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Floats cannot have more than one exp\n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, ln_no, getstrLine(scanner), ' ', (int)scanner->ln_index + 1, '^');
+				if(!isErr && isExp) {
+					errline = getstrLine(scanner, errline);
+					fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Floats cannot have more than one exp\n%8zu | %s\n%8c |%*c\n", pos, ln_no, column, ln_no, errline, ' ', (int)scanner->ln_index + 1, '^');
+				}
 				scanner->isErr = true;
 				isErr = true;
 			} else {
@@ -452,11 +464,12 @@ static void tokenizeNumbers(Scanner* scanner, vectk* vec) {
 	}
 
 	if ((hasDot || isExp) && !isErr) {
-		apndToken(vec, (struct Token){.typ=tk_fltLit, .line = NULL, .data=s.string, .Fval = atof(s.string), .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token){.typ=tk_fltLit, .line = getstrLine(scanner, errline), .data=s.string, .Fval = atof(s.string), .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (!hasDot && !isExp && !isErr) {
-		apndToken(vec, (struct Token){.typ=tk_intLit, .line = NULL, .data=s.string, .Ival = atoll(s.string), .pos = pos, .ln_no = ln_no, .ln_index = column});
+		apndToken(vec, (struct Token){.typ=tk_intLit, .line = getstrLine(scanner, errline), .data=s.string, .Ival = atoll(s.string), .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else {
-		apndToken(vec, (struct Token){.typ=tk_Error, .line = NULL, .data=s.string, .pos = pos, .ln_no = ln_no, .ln_index = column});
+		errline = getstrLine(scanner, errline);
+		apndToken(vec, (struct Token){.typ=tk_Error, .line = errline, .data=s.string, .pos = pos, .ln_no = ln_no, .ln_index = column});
 	}
 
 	// free(s.string); memory leaker
@@ -540,6 +553,7 @@ vectk Tokenizer(char* source, usize len) {
 	initVec(&tokens);
 
 	while(*scanner.current != '\0') {
+		char* errline = NULL;
 		switch(*scanner.current) {
 		case ' ':
 		case '\t':
@@ -551,48 +565,48 @@ vectk Tokenizer(char* source, usize len) {
 			scanner.line = scanner.current + 1;
 			break;
 		case '(':
-			apndToken(&tokens, (struct Token){.typ = tk_lparen, .line = NULL, .data = tkVal[tk_lparen], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_lparen, .line = getstrLine(&scanner, errline), .data = tkVal[tk_lparen], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case ')':
-			apndToken(&tokens, (struct Token){.typ = tk_rparen, .line = NULL, .data = tkVal[tk_rparen], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_rparen, .line = getstrLine(&scanner, errline), .data = tkVal[tk_rparen], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case '{':
-			apndToken(&tokens, (struct Token){.typ = tk_lbrace, .line = NULL, .data = tkVal[tk_lbrace], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_lbrace, .line = getstrLine(&scanner, errline), .data = tkVal[tk_lbrace], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case '}':
-			apndToken(&tokens, (struct Token){.typ = tk_rbrace, .line = NULL, .data = tkVal[tk_rbrace], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_rbrace, .line = getstrLine(&scanner, errline), .data = tkVal[tk_rbrace], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case '[':
-			apndToken(&tokens, (struct Token){.typ = tk_lbracket, .line = NULL, .data = tkVal[tk_lbracket], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_lbracket, .line = getstrLine(&scanner, errline), .data = tkVal[tk_lbracket], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case ']':
-			apndToken(&tokens, (struct Token){.typ = tk_rbracket, .line = NULL, .data = tkVal[tk_rbracket], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_rbracket, .line = getstrLine(&scanner, errline), .data = tkVal[tk_rbracket], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case '@':
-			apndToken(&tokens, (struct Token){.typ = tk_addr, .line = NULL, .data = tkVal[tk_addr], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_addr, .line = getstrLine(&scanner, errline), .data = tkVal[tk_addr], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case ',':
-			apndToken(&tokens, (struct Token){.typ = tk_comma, .line = NULL, .data = tkVal[tk_comma], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_comma, .line = getstrLine(&scanner, errline), .data = tkVal[tk_comma], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case '.':
 			if(isNumb(*(scanner.current + 1))) {
 				tokenizeNumbers(&scanner, &tokens);
 				continue;
 			} else {
-				apndToken(&tokens, (struct Token){.typ = tk_dot, .line = NULL, .data = tkVal[tk_dot], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_dot, .line = getstrLine(&scanner, errline), .data = tkVal[tk_dot], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case ';':
-			apndToken(&tokens, (struct Token){.typ = tk_semi, .line = NULL, .data = tkVal[tk_semi], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_semi, .line = getstrLine(&scanner, errline), .data = tkVal[tk_semi], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case '#':
-			apndToken(&tokens, (struct Token){.typ = tk_hash, .line = NULL, .data = tkVal[tk_hash], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_hash, .line = getstrLine(&scanner, errline), .data = tkVal[tk_hash], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case ':':
-			apndToken(&tokens, (struct Token){.typ = tk_colon, .line = NULL, .data = tkVal[tk_colon], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_colon, .line = getstrLine(&scanner, errline), .data = tkVal[tk_colon], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		case '\\':
-			apndToken(&tokens, (struct Token){.typ = tk_bslash, .line = NULL, .data = tkVal[tk_bslash], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ = tk_bslash, .line = getstrLine(&scanner, errline), .data = tkVal[tk_bslash], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			break;
 		// case '$': --> idea: handle formatted strings with this symbol
 		// 	puts("Error: '$' not implemented / used");
@@ -608,41 +622,42 @@ vectk Tokenizer(char* source, usize len) {
 		// 	break;
 		case '+': // ++ += +
 			if(*(scanner.current + 1) == '+') { // tok ++
-				apndToken(&tokens, (struct Token){.typ = tk_inc, .line = NULL, .data = tkVal[tk_inc], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_inc, .line = getstrLine(&scanner, errline), .data = tkVal[tk_inc], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else if (*(scanner.current + 1) == '=') { // tok +=
-				apndToken(&tokens, (struct Token){.typ = tk_addeq, .line = NULL, .data = tkVal[tk_addeq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_addeq, .line = getstrLine(&scanner, errline), .data = tkVal[tk_addeq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else { // tok +
-				apndToken(&tokens, (struct Token){.typ = tk_add, .line = NULL, .data = tkVal[tk_add], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_add, .line = getstrLine(&scanner, errline), .data = tkVal[tk_add], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '-': // -- -= -> -
 			if(*(scanner.current + 1) == '-') { // tok --
-				apndToken(&tokens, (struct Token){.typ = tk_dec, .line = NULL, .data = tkVal[tk_dec], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_dec, .line = getstrLine(&scanner, errline), .data = tkVal[tk_dec], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else if (*(scanner.current + 1) == '=') { // tok -=
-				apndToken(&tokens, (struct Token){.typ = tk_subeq, .line = NULL, .data = tkVal[tk_subeq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_subeq, .line = getstrLine(&scanner, errline), .data = tkVal[tk_subeq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else if(*(scanner.current + 1) == '>') { // tok ->
-				apndToken(&tokens, (struct Token){.typ = tk_arrow, .line = NULL, .data = tkVal[tk_arrow], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_arrow, .line = getstrLine(&scanner, errline), .data = tkVal[tk_arrow], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else { // tok -
-				apndToken(&tokens, (struct Token){.typ = tk_sub, .line = NULL, .data = tkVal[tk_sub], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_sub, .line = getstrLine(&scanner, errline), .data = tkVal[tk_sub], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '*': // *= *
 			if(*(scanner.current + 1) == '=') { // tok *=
-				apndToken(&tokens, (struct Token){.typ = tk_muleq, .line = NULL, .data = tkVal[tk_muleq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_muleq, .line = getstrLine(&scanner, errline), .data = tkVal[tk_muleq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else if(*(scanner.current + 1) == '/') {
 				char *endBl = malloc(3);
 				endBl = "*/";
-				fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Ending of block comment found. \n%8zu | %s\n%8c |%*c\n", scanner.pos, scanner.ln_no, scanner.ln_index, scanner.ln_no, getstrLine(&scanner), ' ', (int)scanner.ln_index + 1, '^');
-				apndToken(&tokens, (struct Token){.typ=tk_Error, .line=NULL, .data = endBl, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				errline = getstrLine(&scanner, errline);
+				fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Ending of block comment found. \n%8zu | %s\n%8c |%*c\n", scanner.pos, scanner.ln_no, scanner.ln_index, scanner.ln_no, errline, ' ', (int)scanner.ln_index + 1, '^');
+				apndToken(&tokens, (struct Token){.typ=tk_Error, .line=getstrLine(&scanner, errline), .data = endBl, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else { // tok *
-				apndToken(&tokens, (struct Token){.typ = tk_mul, .line = NULL, .data = tkVal[tk_mul], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_mul, .line = getstrLine(&scanner, errline), .data = tkVal[tk_mul], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '/': // // /* */ /= / 
@@ -653,83 +668,83 @@ vectk Tokenizer(char* source, usize len) {
 				// puts("Error: '/**/' not implemented");
 				ignoreBlockComment(&scanner);
 			} else if(*(scanner.current + 1) == '=') { // tok /=
-				apndToken(&tokens, (struct Token){.typ = tk_diveq, .line = NULL, .data = tkVal[tk_diveq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_diveq, .line = getstrLine(&scanner, errline), .data = tkVal[tk_diveq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else { // tok /
-				apndToken(&tokens, (struct Token){.typ = tk_div, .line = NULL, .data = tkVal[tk_div], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_div, .line = getstrLine(&scanner, errline), .data = tkVal[tk_div], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '%':
 			if(*(scanner.current + 1) == '=') {
-				apndToken(&tokens, (struct Token){.typ = tk_modeq, .line = NULL, .data = tkVal[tk_modeq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_modeq, .line = getstrLine(&scanner, errline), .data = tkVal[tk_modeq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else {
-				apndToken(&tokens, (struct Token){.typ = tk_mod, .line = NULL, .data = tkVal[tk_mod], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_mod, .line = getstrLine(&scanner, errline), .data = tkVal[tk_mod], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '=': // == =
 			if(*(scanner.current + 1) == '=') {
-				apndToken(&tokens, (struct Token){.typ = tk_eqeqs, .line = NULL, .data = tkVal[tk_eqeqs], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_eqeqs, .line = getstrLine(&scanner, errline), .data = tkVal[tk_eqeqs], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else {
-				apndToken(&tokens, (struct Token){.typ = tk_assign, .line = NULL, .data = tkVal[tk_assign], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_assign, .line = getstrLine(&scanner, errline), .data = tkVal[tk_assign], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '|': // || |
 			if(*(scanner.current + 1) == '|') {
-				apndToken(&tokens, (struct Token){.typ = tk_bitor, .line = NULL, .data = tkVal[tk_bitor], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_bitor, .line = getstrLine(&scanner, errline), .data = tkVal[tk_bitor], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else {
-				apndToken(&tokens, (struct Token){.typ = tk_or, .line = NULL, .data = tkVal[tk_or], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_or, .line = getstrLine(&scanner, errline), .data = tkVal[tk_or], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '&': // && &
 			if(*(scanner.current + 1) == '&') {
-				apndToken(&tokens, (struct Token){.typ = tk_bitand, .line = NULL, .data = tkVal[tk_bitand], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_bitand, .line = getstrLine(&scanner, errline), .data = tkVal[tk_bitand], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else {
-				apndToken(&tokens, (struct Token){.typ = tk_and, .line = NULL, .data = tkVal[tk_and], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_and, .line = getstrLine(&scanner, errline), .data = tkVal[tk_and], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '^': // ^^ ^
 			if(*(scanner.current + 1) == '^') {
-				apndToken(&tokens, (struct Token){.typ = tk_bitxor, .line = NULL, .data = tkVal[tk_bitxor], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_bitxor, .line = getstrLine(&scanner, errline), .data = tkVal[tk_bitxor], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else {
-				apndToken(&tokens, (struct Token){.typ = tk_xor, .line = NULL, .data = tkVal[tk_xor], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_xor, .line = getstrLine(&scanner, errline), .data = tkVal[tk_xor], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '<':
 			if(*(scanner.current + 1) == '<') {
-				apndToken(&tokens, (struct Token){.typ = tk_shiftL, .line = NULL, .data = tkVal[tk_shiftL], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_shiftL, .line = getstrLine(&scanner, errline), .data = tkVal[tk_shiftL], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else if (*(scanner.current + 1) == '=') {
-				apndToken(&tokens, (struct Token){.typ = tk_lesseq, .line = NULL, .data = tkVal[tk_lesseq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_lesseq, .line = getstrLine(&scanner, errline), .data = tkVal[tk_lesseq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else {
-				apndToken(&tokens, (struct Token){.typ = tk_less, .line = NULL, .data = tkVal[tk_less], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_less, .line = getstrLine(&scanner, errline), .data = tkVal[tk_less], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '!':
 			if(*(scanner.current + 1) == '!') {
-				apndToken(&tokens, (struct Token){.typ = tk_bitnot, .line = NULL, .data = tkVal[tk_bitnot], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_bitnot, .line = getstrLine(&scanner, errline), .data = tkVal[tk_bitnot], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else if (*(scanner.current + 1) == '=') {
-				apndToken(&tokens, (struct Token){.typ = tk_noteqs, .line = NULL, .data = tkVal[tk_noteqs], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_noteqs, .line = getstrLine(&scanner, errline), .data = tkVal[tk_noteqs], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else {
-				apndToken(&tokens, (struct Token){.typ = tk_not, .line = NULL, .data = tkVal[tk_not], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_not, .line = getstrLine(&scanner, errline), .data = tkVal[tk_not], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '>':
 			if(*(scanner.current + 1) == '>') {
-				apndToken(&tokens, (struct Token){.typ = tk_shiftR, .line = NULL, .data = tkVal[tk_shiftR], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_shiftR, .line = getstrLine(&scanner, errline), .data = tkVal[tk_shiftR], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else if (*(scanner.current + 1) == '=') {
-				apndToken(&tokens, (struct Token){.typ = tk_greateq, .line = NULL, .data = tkVal[tk_greateq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_greateq, .line = getstrLine(&scanner, errline), .data = tkVal[tk_greateq], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 				advance(&scanner);
 			} else {
-				apndToken(&tokens, (struct Token){.typ = tk_great, .line = NULL, .data = tkVal[tk_great], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+				apndToken(&tokens, (struct Token){.typ = tk_great, .line = getstrLine(&scanner, errline), .data = tkVal[tk_great], .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			}
 			break;
 		case '\"':
@@ -749,12 +764,13 @@ vectk Tokenizer(char* source, usize len) {
 			tokenizeNumbers(&scanner, &tokens);
 			continue;
 		default:
-			fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Unknown Character: '%c' \n%8zu | %s\n%8c |%*c\n", scanner.pos, scanner.ln_no, scanner.ln_index, *scanner.current, scanner.ln_no, getstrLine(&scanner), ' ', (int)scanner.ln_index + 1, '^');
+			errline = getstrLine(&scanner, errline);
+			fprintf(stderr, "Tokenizer Error @ %zu:%zu:%zu: Unknown Character: '%c' \n%8zu | %s\n%8c |%*c\n", scanner.pos, scanner.ln_no, scanner.ln_index, *scanner.current, scanner.ln_no, errline, ' ', (int)scanner.ln_index + 1, '^');
 			// char ErrTok[2] = {*scanner.current, '\0'};
 			char *ErrTok = malloc(2);
 			ErrTok[0] = *scanner.current;
 			ErrTok[1] = '\0';
-			apndToken(&tokens, (struct Token){.typ=tk_Error, .line=NULL, .data = ErrTok, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
+			apndToken(&tokens, (struct Token){.typ=tk_Error, .line=errline, .data = ErrTok, .pos = scanner.pos, .ln_no = scanner.ln_no, .ln_index = scanner.ln_index});
 			scanner.isErr = true;
 		}
 		advance(&scanner);
