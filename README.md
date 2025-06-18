@@ -24,7 +24,7 @@ Map
 
 ---
 
-✅ = implemented & working 
+✅ = implemented & working   
 ❌ = not implemented  
 🔄 = Work In Progress  
 ⚠️ = Bugged / Issues found in Feature
