@@ -1,6 +1,6 @@
 [Image goes here]: #
 
-![Aurora](./Aurora.jpg "Aurora")
+![Aurora](./Aurora.jpg "Aurora, by my sister Sarah")
 
 # <center>The Aurora Programming Language<center>
 
