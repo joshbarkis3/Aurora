@@ -1,8 +1,10 @@
 + - * / % " ' & | ^ ! = \ < > : ; , . @ # 
--> ++ -- /* */ += -= /= *= %= == != <= >= || && ^^ !!<< >>
+-> ++ -- += -= /= *= %= == != <= >= || && ^^ !!<< >>
 $ ~ ` ? 
 
 // helo i am cool please eat chiken nugs ~ ! @ # $ ^ { }
+
+/* Test 1 test 2 */
 
 8 2 23 3233
 
@@ -30,6 +32,13 @@ auto
 import
 use
 typedef
+struct
+enum
+union
+const
+static
+register
+volatile
 
 i8 int8 sbyte
 i16 int16 short

@@ -33,6 +33,13 @@ typedef enum {
 	tk_import,
 	tk_use,
 	tk_typedef,
+	tk_struct,
+	tk_enum,
+	tk_union,
+	tk_const,
+	tk_static,
+	tk_reg,
+	tk_volatile,
 
 	// datatype keywords
 	tk_int8,

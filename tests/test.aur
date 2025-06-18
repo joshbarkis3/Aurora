@@ -1,5 +1,9 @@
 fn main(nil) -> int32 { 
 
+  /* 
+  test 
+  */
+
   ? ? $ 123bar  
   123wiz
 

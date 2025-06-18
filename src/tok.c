@@ -1,8 +1,6 @@
 #include "tok.h"
 #include "common.h"
 #include "memory.h"
-#include <stdlib.h>
-#include <string.h>
 
 #define IndentMaxSize ((usize) 255)
 #define NumberMaxSize ((usize) 255)
@@ -36,6 +34,13 @@ char* tkVal[TKCOUNT] = {
 	[tk_import] = "import",
 	[tk_use] = "use",
 	[tk_typedef] = "typedef",
+	[tk_struct] = "struct",
+	[tk_enum] = "enum",
+	[tk_union] = "union",
+	[tk_const] = "const",
+	[tk_static] = "static",
+	[tk_reg] = "register",
+	[tk_volatile] = "volatile",
 
 	[tk_int8] = "int8",
 	[tk_int16] = "int16",
@@ -135,6 +140,13 @@ const char* tkToString[TKCOUNT] = {
 	[tk_import] = "tk_import",
 	[tk_use] = "tk_use",
 	[tk_typedef] = "tk_typedef",
+	[tk_struct] = "tk_struct",
+	[tk_enum] = "tk_enum",
+	[tk_union] = "tk_union",
+	[tk_const] = "tk_const",
+	[tk_static] = "tk_static",
+	[tk_reg] = "tk_reg",
+	[tk_volatile] = "tk_volatile",
 
 	[tk_int8] = "tk_int8",
 	[tk_int16] = "tk_int16",
@@ -356,6 +368,24 @@ static void tokenizeKeywordIndent(Scanner* scanner, vectk* vec) {
 	} else if (StrcCmp(&s, "typedef")) {
 		free(s.string);
 		apndToken(vec, (struct Token) {.typ = tk_typedef, .line = getstrLine(scanner, errline), .data = tkVal[tk_typedef], .pos = pos, .ln_no = ln_no, .ln_index = column});
+	} else if (StrcCmp(&s, "struct")) {
+		free(s.string);
+		apndToken(vec, (struct Token) {.typ = tk_struct, .line = getstrLine(scanner, errline), .data = tkVal[tk_struct], .pos = pos, .ln_no = ln_no, .ln_index = column});
+	} else if (StrcCmp(&s, "enum")) {
+		free(s.string);
+		apndToken(vec, (struct Token) {.typ = tk_enum, .line = getstrLine(scanner, errline), .data = tkVal[tk_enum], .pos = pos, .ln_no = ln_no, .ln_index = column});
+	} else if (StrcCmp(&s, "union")) {
+		free(s.string);
+		apndToken(vec, (struct Token) {.typ = tk_union, .line = getstrLine(scanner, errline), .data = tkVal[tk_union], .pos = pos, .ln_no = ln_no, .ln_index = column});
+	} else if (StrcCmp(&s, "static")) {
+		free(s.string);
+		apndToken(vec, (struct Token) {.typ = tk_static, .line = getstrLine(scanner, errline), .data = tkVal[tk_static], .pos = pos, .ln_no = ln_no, .ln_index = column});
+	} else if (StrcCmp(&s, "register")) {
+		free(s.string);
+		apndToken(vec, (struct Token) {.typ = tk_reg, .line = getstrLine(scanner, errline), .data = tkVal[tk_reg], .pos = pos, .ln_no = ln_no, .ln_index = column});
+	} else if (StrcCmp(&s, "volatile")) {
+		free(s.string);
+		apndToken(vec, (struct Token) {.typ = tk_volatile, .line = getstrLine(scanner, errline), .data = tkVal[tk_volatile], .pos = pos, .ln_no = ln_no, .ln_index = column});
 	} else if (StrcCmp(&s, "i8") || StrcCmp(&s, "int8") || StrcCmp(&s, "sbyte")) { 
 		free(s.string);
 		apndToken(vec, (struct Token) {.typ = tk_int8, .line = getstrLine(scanner, errline), .data = tkVal[tk_int8], .pos = pos, .ln_no = ln_no, .ln_index = column});

@@ -6,21 +6,12 @@ char* readFile(const char* filename);
 int main(i32 argc, char** argv) {
 	char* code = readFile("./tests/test.aur");
 
-	// for(i32 i = 0; i <= strlen(code); i++) {
-	// 	switch (code[i]) {
-	// 	case '\0':
-	// 		puts("EOF");
-	// 	}
-	// }
-
 	vectk tokens = Tokenizer(code, strlen(code));
 	printTokens(&tokens);
 
 	free(code);
 	freeVec(&tokens);
-	// printf("%zu\n", strlen(code));
 
-	// printf("%s\n", code);
 	return 0;
 }
 
