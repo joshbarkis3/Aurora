@@ -1,5 +1,7 @@
 [Image goes here]: #
 
+![Aurora](./Aurora.jpg "Aurora")
+
 # <center>The Aurora Programming Language<center>
 
 Aurora is a General Purpose Statically-typed low-level language built for a mix of security, features and while still retaining Freedom. Aurora mixes syntax/grammar of many other languages to make a nice friendly syntax (or at least it tries to...).
