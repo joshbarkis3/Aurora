@@ -22,7 +22,7 @@ Map
 
 ---
 
-✅ = Completed / implemented  
+✅ = implemented & working 
 ❌ = not implemented  
 🔄 = Work In Progress  
 ⚠️ = Bugged / Issues found in Feature
@@ -35,8 +35,8 @@ Not Comprehensive, just whatever I thought of at 1am on 6/17
 BASIC COMPILER FEATURES
 | Status | Feature Desc. |  
 | :-----: | ------------- |
-| 🔄       | Tokenizer    |
-| ❌       | Parser       |
+| ✅       | Tokenizer    |
+| 🔄       | Parser       |
 | ❌       | Assembly Gen |
 | ❌       | Linking      |
 
