@@ -1,5 +1,5 @@
 CC = cc
-CFLAGS = -Wall -g
+CFLAGS = -Wall -Werror -ggdb3
 LDFLAGS =
 
 EXEC = aurora
