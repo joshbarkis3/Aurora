@@ -2,7 +2,8 @@
 #define tok_h
 
 #include "common.h"
-#include "str.h"
+
+
 
 typedef enum {
 	tk_Error = 0, 	// Error
@@ -115,6 +116,9 @@ typedef enum {
 
 #define TKCOUNT (tk_End)
 
+extern char * tkVal[TKCOUNT];
+extern const char* tkToString[TKCOUNT];
+
 typedef struct {
 	char* source;
 	char* current;
@@ -143,6 +147,8 @@ typedef struct {
 	i32 capacity;
 	i32 length;
 } vectk;
+
+
 
 vectk Tokenizer(char* source, usize len);
 void printTokens(vectk* vec);

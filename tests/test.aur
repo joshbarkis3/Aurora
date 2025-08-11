@@ -1,11 +1,13 @@
+/* 
+  Basic test, returns 23 as a status code
+
+
 fn main(nil) -> int32 { 
+  return 23; 
+}
 
-  /* 
-  test 
-  */
+*/
 
-  ? ? $ 123bar  
-  123wiz
-
-  return 132.2e2; 
+fn main() { identifier
+  return 23.3423E-23;
 }

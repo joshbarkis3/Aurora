@@ -1,0 +1,42 @@
+using Aurora.stdio;
+
+/*
+	This code has been made to test the functionality of if - else if - else statements
+*/
+
+fn main(nil) -> i32 {
+	i32 x = 5;
+	i32 y = 8;
+
+	if (x == 5) {
+		println("yes");
+	}
+
+	if(x < 0) {
+		println("x is positive");
+	} else {
+		println("x is negative");
+	}
+
+	if(y < 0) {
+		println("y is positive");
+	} else {
+		println("y is negative");
+	}
+
+	if (x > y) {
+		println($"x({x}) is greater than y({y})");
+	} else if (y > x) {
+		println($"y({y}) is greater than x({x})");
+	} else {
+		println($"x and y are equal: {x}");
+	}
+
+	if(x - y > 0) {
+		println("WOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
+	} else if(y - x > 0) {
+		println("NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
+	}
+
+	return 0;
+}

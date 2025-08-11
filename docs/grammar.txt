@@ -1,3 +1,0 @@
-ASDL - abstract syntax Description Language
-
-EBNF - extended backus-naur form

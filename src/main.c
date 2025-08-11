@@ -1,5 +1,6 @@
 #include "common.h"
 #include "tok.h"
+#include "parser.h"
 
 char* readFile(const char* filename);
 
@@ -15,7 +16,7 @@ int main(i32 argc, char** argv) {
 		fprintf(stderr, "Error filetype: incorrect filetype.\n");
 		exit(-1);
 	} else {
-		code = readFile("./tests/test.aur");
+		code = readFile(argv[1]);
 	}
 
 	vectk tokens = Tokenizer(code, strlen(code));
@@ -25,11 +26,12 @@ int main(i32 argc, char** argv) {
 	if((argc >= 3) && (strcmp(argv[2], "-t") == 0)) {
 		printTokens(&tokens);
 		goto end;
+	} else if((argc >= 3) && (strcmp(argv[2], "-p") == 0)) {
+		// parse(&tokens);
+		printf("ummmmmmm\n");
 	}
 
 	// parsing
-
-	
 
 	end:
 	free(code);

@@ -1,0 +1,24 @@
+using Aurora.stdio;
+
+fn main(nil) -> i32 {
+	i32 i = 0;
+
+	while(i < 10) {
+		println(i);
+		i++;
+	}
+
+	i = 0;
+	do {
+		println(i);
+		i++;
+	} while(i < 10);
+
+	for(i32 j = 0; j < 10; j++) {
+		println(j);
+	}
+
+
+
+	return 0;
+}

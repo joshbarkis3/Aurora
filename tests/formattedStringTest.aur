@@ -1,0 +1,16 @@
+using Aurora.stdio;
+
+/*
+	Formatted string test
+	todo finalize this
+*/
+
+fn main(nil) -> i32 {
+	i32 x = 5;
+	f32 pi = 3.14159265;
+	str s = $"{pi:-3.2f}{x}";
+
+	println(str); // should output >3.14   5
+
+	return 0;
+}
